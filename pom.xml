@@ -8,7 +8,7 @@
   <name>QAWeb Maven Webapp</name>
   <url>http://maven.apache.org</url>
  <properties>
-		<spring.version>3.0.5.RELEASE</spring.version>
+		<spring.version>3.1.1.RELEASE</spring.version>
 		<junit.version>4.11</junit.version>
 		<jdk.version>1.6</jdk.version>
 	</properties>
@@ -38,6 +38,12 @@
 			<artifactId>junit</artifactId>
 			<version>${junit.version}</version>
 			<scope>test</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.codehaus.jackson</groupId>
+			<artifactId>jackson-mapper-asl</artifactId>
+			<version>1.9.12</version>
 		</dependency>
 	</dependencies>
 	<build>
