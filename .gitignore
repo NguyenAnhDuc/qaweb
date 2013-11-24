@@ -1,1 +1,10 @@
+<<<<<<< HEAD
 target/
+=======
+*.class
+
+# Package Files #
+*.jar
+*.war
+*.ear
+>>>>>>> 816b61c6ce484f137cb1beae85af4c00c85ec1b0
