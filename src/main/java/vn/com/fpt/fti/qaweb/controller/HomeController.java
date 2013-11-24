@@ -1,5 +1,14 @@
 package vn.com.fpt.fti.qaweb.controller;
 
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+import org.codehaus.jackson.JsonToken;
+import org.json.JSONObject;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
 import org.springframework.stereotype.Controller;
@@ -16,8 +25,6 @@ import edu.stanford.nlp.ie.AbstractSequenceClassifier;
 import edu.stanford.nlp.ie.crf.CRFClassifier;
 import fpt.qa.qiafc.AFConverter;
 import fpt.qa.qiafc.AffirmativeForm;
-import vn.com.fpt.fti.qaweb.model.AffirmativeResponse;
-import vn.com.fpt.fti.qaweb.model.Person;
 import vn.hus.nlp.tokenizer.VietTokenizer;
  
 
@@ -25,22 +32,8 @@ import vn.hus.nlp.tokenizer.VietTokenizer;
 @Controller
 @RequestMapping("/")
 public class HomeController {
-	public VietTokenizer vietTokenizer;
-	public AbstractSequenceClassifier classifier;
-	public static String vietTokenPropertyFile = "D:\\Works\\QAData\\tokenizer\\tokenizer.properties";
-	public static String dataPath = "D:\\Works\\QAdata\\data\\";
-	public static String  model = "D:\\Works\\QAdata\\FPTCO-normal-5-label.ser.gz";
 	
-	public HomeController(){
-		this.vietTokenizer = new VietTokenizer(vietTokenPropertyFile);
-		try{
-			this.classifier = CRFClassifier.getClassifier(model);
-		}
-		catch (Exception ex){
-			ex.printStackTrace();
-		}
-		System.out.println("HomeController Init");
-	}
+	
 	
 	@RequestMapping(value="/index", method = RequestMethod.GET)
 	public String index(ModelMap model) {
@@ -55,67 +48,53 @@ public class HomeController {
 		return result;
 	}
 	
-	@RequestMapping(value="/testParam/{id}", method = RequestMethod.GET)
+	@RequestMapping(value="/testSendPost", method = RequestMethod.GET)
 	@ResponseBody
-	public String testParam(@PathVariable String id){
-		String result = "This is result of a test function";
-		return id;
+	public String testSendPost() throws Exception{
+		//String result = sendGet();
+		String result = "{\"name\":\"mit\",\"age\":21}";
+		JSONObject json = new JSONObject(result);
+		return json.getString("name");
 	}
 	
-	@RequestMapping(value="/testToken", method = RequestMethod.POST, produces="text/html; charset=UTF-8")
-	@ResponseBody
-	public String testToken(@RequestParam("sText") String sInput){
-		String result = "This is result of a test function";
-		//String sInput = "Chủ tịch công ty cổ phần FPT là ông Trương Gia Bình";
-		try{
-			
-			result = this.vietTokenizer.tokenize(sInput)[0];
-		}
-		catch (Exception ex){
-			return ex.getMessage();
-		}
-		System.out.println("Success");
-		return result;
-	}
-	
-	@RequestMapping(value="/testJSON", method = RequestMethod.GET)
+	@RequestMapping(value="/testJSON", method = RequestMethod.GET, produces="application/json; charset=UTF-8")
 	@ResponseBody
 	public Person testJSON(){
-		Person person = new Person();
-		person.name = "Duc";
-		person.age = 23;
-		return person;
+		Person aPerson = new Person();
+		aPerson.name = "mit";
+		aPerson.age = 21;
+		return aPerson;
 	}
 	
-	@RequestMapping(value="/testAffirmative", method = RequestMethod.POST, produces="application/json; charset=UTF-8")
-	@ResponseBody
-	public AffirmativeResponse testAffirmative(@RequestParam("sQuestion") String sQuestion){
-		String result = "This is result of a test function";
-		//String sInput = "Chủ tịch công ty cổ phần FPT là ông Trương Gia Bình";
-		AffirmativeResponse  affirmativeResponse = new AffirmativeResponse();
-		try{
-			AffirmativeForm affirm = AFConverter.process(sQuestion, this.dataPath);
-			affirmativeResponse.questionWord = affirm.getQuestionWord();
-			affirmativeResponse.entityType = affirm.getNamedEntityType();
+	private static String sendGet() throws Exception {
+		 
+		String url = "http://localhost:8080/QAWeb/testJSON";
+ 
+		URL obj = new URL(url);
+		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+ 
+		// optional default is GET
+		con.setRequestMethod("GET");
+ 
+		//add request header
+		con.setRequestProperty("User-Agent", "Mozilla/5.0");
+ 
+		int responseCode = con.getResponseCode();
+		System.out.println("\nSending 'GET' request to URL : " + url);
+		System.out.println("Response Code : " + responseCode);
+ 
+		BufferedReader in = new BufferedReader(
+		        new InputStreamReader(con.getInputStream()));
+		String inputLine;
+		StringBuffer response = new StringBuffer();
+ 
+		while ((inputLine = in.readLine()) != null) {
+			response.append(inputLine);
 		}
-		catch (Exception ex){
-			ex.printStackTrace();
-		}
-		System.out.println("Success");
-		return affirmativeResponse;
+		in.close();
+ 
+		//print result
+		return response.toString();
+ 
 	}
-	
-	@RequestMapping(value="/testClassify", method = RequestMethod.POST, produces="application/json; charset=UTF-8")
-	@ResponseBody
-	public String testClassify(@RequestParam("sText") String sText){
-		String result = "";
-		//String sInput = "Chủ tịch công ty cổ phần FPT là ông Trương Gia Bình";
-		result = this.classifier.classifyWithInlineXML(sText);
-		System.out.println("Success");
-		return result;
-	}
-	
-	
-	
-	
 }
