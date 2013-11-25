@@ -22,7 +22,7 @@
 		</property>
 	</bean>
 	
-
+	<context:property-placeholder location="/resources/config.properties"/>
 	
  	<mvc:resources mapping="/resources/**" location="/resources/" />
  	<mvc:annotation-driven />
