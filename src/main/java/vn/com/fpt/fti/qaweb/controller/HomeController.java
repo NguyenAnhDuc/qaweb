@@ -28,6 +28,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 import vn.com.fpt.fti.qaweb.helper.JSONReader;
 import vn.com.fpt.fti.qaweb.helper.ProcessHelper;
 import vn.com.fpt.fti.qaweb.helper.SolrHelper;
+import vn.com.fpt.fti.qaweb.helper.FTIEncoder;
 import vn.com.fpt.fti.qaweb.model.SolrResponse;
 
 
@@ -39,7 +40,7 @@ public class HomeController {
 	@Value("${TokenURL}") String TokenURL;
 	@Value("${ClassifyURL}") String ClassifyURL;
 	@Value("${SolrURL}") String SolrURL;
-	
+	@Value("${NumResult}") int NumResult;
 	
 	@RequestMapping(value="/index", method = RequestMethod.GET)
 	public String index(ModelMap model) {
@@ -47,47 +48,59 @@ public class HomeController {
 		return "index";
  	}
 
-	@RequestMapping(value="/test", method = RequestMethod.GET)
+	@RequestMapping(value="/qasearch", method = RequestMethod.GET)
+	public String qasearch(ModelMap model) {
+		model.addAttribute("message", "Maven Web Project + Spring 3 MVC - welcome()");
+		return "qasearch";
+ 	}
+	
+	@RequestMapping(value="/test", method = RequestMethod.GET,produces="text/html; charset=UTF-8")
 	@ResponseBody
 	public String testFunction(){
-		String result = "This is result of a test function";
+		String result = "Chủ tịch fpt là ông Trương Gia Bình";
+		result = FTIEncoder.encode(result);
 		return result;
 	}
 	
-	@RequestMapping(value="/testSendPost", method = RequestMethod.GET)
+	
+	
+	@RequestMapping(value="/testSendPost", method = RequestMethod.GET,produces="text/html; charset=UTF-8")
 	@ResponseBody
 	public String testSendPost() throws Exception{
-		String urlParameter = "sText="+"\"Chủ tịch fpt là ai?\"";
-		String result = ProcessHelper.sendGet(AffirmativeURL,"POST",urlParameter);
-		//String result = "{\"name\":\"mit\",\"age\":21}";
+		String sText = "Chủ tịch fpt là ông Trương Gia Bình với doanh thu hơn 50%";
+		//String result = ProcessHelper.sendGet(ClassifyURL,"POST", urlParameter);
+		String result = ProcessHelper.sendPost(ClassifyURL,sText);
+		
 		//JSONObject json = new JSONObject(result);
-		//return json.getString("name");
-		JSONObject json = new JSONObject(result);
-		return json.getString("questionWord");
+		//return json.getString("result");
+		return result;
 	}
 	
-	@RequestMapping(value="/testJSON", method = RequestMethod.GET, produces="application/json; charset=UTF-8")
+	
+	@RequestMapping(value="/testJSON", method = RequestMethod.POST, produces="application/json; charset=UTF-8")
 	@ResponseBody
-	public Person testJSON(){
+	public Person testJSON(@RequestParam("sText") String sInput){
 		Person aPerson = new Person();
-		aPerson.name = "mit";
+		System.out.println("json string: "+sInput);
+		aPerson.name = sInput;
 		aPerson.age = 21;
 		return aPerson;
 	}
 	
+	
+	
 	@RequestMapping(value="/testQA", method = RequestMethod.POST, produces="application/json;charset=UTF-8")
 	@ResponseBody
 	public SolrResponse testQA(@RequestParam("sText") String inputText){
+		System.out.println("inputText"+ inputText);
 		SolrResponse json = new SolrResponse();
 		String questionWord = "", entityType = "";
-		String urlParameter = "sText=" + inputText ;
 		String result = "";
-		System.out.println(urlParameter);
 		String solrQuery="";
 		try{
 			// Affirmative
-			String affirmativeResult = ProcessHelper.sendGet(AffirmativeURL, "POST",urlParameter);
-			System.out.println(affirmativeResult);
+			String affirmativeResult = ProcessHelper.sendPost(AffirmativeURL, inputText);
+			//System.out.println(affirmativeResult);
 			JSONObject affirmativeJson = new JSONObject(affirmativeResult);
 			if ((affirmativeJson.getString("status")).equals("success")){
 				questionWord = affirmativeJson.getString("questionWord");
@@ -95,7 +108,6 @@ public class HomeController {
 			}
 			inputText = inputText.trim().replaceAll("\\?", "").replaceAll("\\s+", " ").replaceAll(" ", ",");
 	        String query = "(question:("+inputText+")^1) OR (answer:("+inputText+")^1)";
-	        System.out.println(inputText);
 			if (entityType == "") entityType = "undefine";
 			
 			// Solr Url
@@ -111,7 +123,7 @@ public class HomeController {
 		// Query Solr 
 		ArrayList<String> answers = new ArrayList<String>();
 		try {
-			answers = SolrHelper.QueryResult(solrQuery, inputText, 10);
+			answers = SolrHelper.QueryResult(solrQuery, inputText, NumResult);
 			json.status = "success";
 			json.answers = answers;
 		}
@@ -120,15 +132,15 @@ public class HomeController {
 			return json;
 		}
 		
+		System.out.println("Classify:");
+		String textAnswer = "";
 		// Classify
 		try {
 			for (int i=0;i<json.answers.size();i++){
-				String textAnswer = json.answers.get(i);
-				urlParameter = "sText=" + textAnswer;
-				System.out.println(textAnswer);
-				String classifyResult = ProcessHelper.sendGet(ClassifyURL, "POST", urlParameter);
+				textAnswer = json.answers.get(i);
+				String classifyResult = ProcessHelper.sendPost(ClassifyURL, textAnswer);
 				JSONObject classifyJSON = new JSONObject(classifyResult);
-				System.out.println(classifyJSON.getString("status"));
+			
 				if (classifyJSON.getString("status").equals("success")){
 					json.answers.set(i,classifyJSON.getString("result"));
 					System.out.println(classifyJSON.getString("result"));
@@ -138,6 +150,7 @@ public class HomeController {
 		}
 		catch (Exception ex){
 			json.status = "fail";
+			System.out.println("fail here: " + textAnswer);
 			return json;
 		}
 		

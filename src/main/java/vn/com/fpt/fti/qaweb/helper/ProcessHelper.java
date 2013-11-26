@@ -1,10 +1,26 @@
 package vn.com.fpt.fti.qaweb.helper;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataOutputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
 
 public class ProcessHelper {
 	public String marktext(String input, String type){
@@ -33,8 +49,8 @@ public class ProcessHelper {
 	        markedtext = markedtext.replaceAll("</NUM>","</span>");
 	        return markedtext;
 	    }
-	
-	public static String sendGet(String url,String method,String urlParameter) throws Exception {
+	// error for special character
+	private static String sendGet(String url,String method,String urlParameter) throws Exception {
 		 
 		//String url = "http://localhost:8080/QAWeb/testJSON";
  
@@ -50,25 +66,64 @@ public class ProcessHelper {
 		
 		con.setDoInput(true);
 	    con.setDoOutput(true);
-		DataOutputStream wr = new DataOutputStream (con.getOutputStream ());
-	    wr.writeBytes(urlParameter);
+	    DataOutputStream writer = new DataOutputStream(con.getOutputStream());
+	    BufferedWriter wr = new BufferedWriter(new OutputStreamWriter(writer, "UTF-8"));
+		//urlParameter = FTIEncoder.encode(urlParameter);
+		//byte[] data=urlParameter.getBytes("UTF-8");
+		System.out.println("Url parameter: " + urlParameter);
+		wr.write(urlParameter);
+		
 	    wr.flush();
 	    wr.close();
 		int responseCode = con.getResponseCode();
-		System.out.println("\nSending 'GET' request to URL : " + url);
+		System.out.println("\nSending " + method + "request to URL : " + url);
 		System.out.println("Response Code : " + responseCode);
- 
+		System.out.println("Url parameter: " + urlParameter);
 		BufferedReader in = new BufferedReader(
-		        new InputStreamReader(con.getInputStream()));
+				new InputStreamReader(con.getInputStream()));
 		String inputLine;
-		StringBuffer response = new StringBuffer();
+		StringBuilder response = new StringBuilder();
  
+		System.out.println("url Parameter: " + urlParameter);
 		while ((inputLine = in.readLine()) != null) {
-			response.append(inputLine);
+			byte [] b = inputLine.getBytes();  // NOT UTF-8
+	        String  resultLine = new String(b, "UTF-8");
+			response.append(resultLine);
 		}
 		in.close();
- 
 		//print result
 		return response.toString();
+	}
+	
+	static String convertStreamToString(java.io.InputStream is) {
+	    java.util.Scanner s = new java.util.Scanner(is).useDelimiter("\\A");
+	    return s.hasNext() ? s.next() : "";
+	}
+	
+	public static String sendPost(String url,String inputText) throws Exception{
+		String result = "";
+		HttpClient httpclient = new DefaultHttpClient();
+		HttpPost httppost = new HttpPost(url);
+
+		// Request parameters and other properties.
+		List<NameValuePair> params = new ArrayList<NameValuePair>(1);
+		params.add(new BasicNameValuePair("sText", inputText));
+		//params.add(new BasicNameValuePair("param-2", "Hello!"));
+		httppost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+
+		//Execute and get the response.
+		HttpResponse response = httpclient.execute(httppost);
+		HttpEntity entity = response.getEntity();
+
+		if (entity != null) {
+		    InputStream instream = entity.getContent();
+		    result = convertStreamToString(instream);
+		    try {
+		        // do something useful
+		    } finally {
+		        instream.close();
+		    }
+		}
+		return result;
 	}
 }

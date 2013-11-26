@@ -21,7 +21,7 @@ public class SolrHelper {
 		ArrayList<String> anstexts = new ArrayList<String>();
 		//get Answers
 		int found = 0;
-		for (int i = 0; i < Math.min(docs.length(),10); i++) {
+		for (int i = 0; i < Math.min(docs.length(),numResult); i++) {
 			int stt = found / 10 + 1;
 			//resultText += "<p class=\"selection page-" + stt + "\">";
 			JSONObject qa = docs.getJSONObject(i);
